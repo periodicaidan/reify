@@ -3,6 +3,9 @@ input.html
 .idea/
 *.iml
 
+# Regex files generated during testing
+*.regex
+
 # Stuff I may add in a later version
 gui.py
 

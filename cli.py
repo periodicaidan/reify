@@ -28,11 +28,11 @@ def reify():
 
 
 @reify.command("subs")
-@click.option("-it", "--input-template", required=True, prompt="Input template",
+@click.option("-it", "--input-template", required=True, prompt="Input template", type=click.Path(),
               help="Path to the template pattern you want to replace")
-@click.option("-ot", "--output-template", required=True, prompt="Output template",
+@click.option("-ot", "--output-template", required=True, prompt="Output template", type=click.Path(),
               help="Path to the template pattern to replace the old pattern with")
-@click.option("-f", "--file", required=True, prompt="File you want to search in",
+@click.option("-f", "--file", required=True, prompt="File you want to search in", type=click.Path(),
               help="Path to the file to perform find-and-replace on")
 @click.option("-I", "--in-place", is_flag=True,
               help="If set, the substitution will be performed directly on the file")
@@ -45,9 +45,9 @@ def subs(input_template, output_template, file, in_place, compress_whitespace):
 
 
 @reify.command("generate")
-@click.option("-it", "--input-template", required=True, prompt="Input template",
+@click.option("-it", "--input-template", required=True, prompt="Input template", type=click.Path(),
               help="Path to an input template")
-@click.option("-ot", "--output-template", required=True, prompt="Output template",
+@click.option("-ot", "--output-template", required=True, prompt="Output template", type=click.Path(),
               help="Path to the template you you're replacing it with")
 @click.option("-W", "--compress-whitespace", is_flag=True,
               help="If set, newlines and other series of whitespace will be ignored")
@@ -63,9 +63,9 @@ def generate(input_template, output_template, compress_whitespace):
 
 
 @reify.command("find")
-@click.option("-t", "--template", required=True, prompt="Input template",
+@click.option("-t", "--template", required=True, prompt="Input template", type=click.Path(),
               help="Path to the template you want to search against")
-@click.option("-f", "--file", required=True, prompt="File to search in",
+@click.option("-f", "--file", required=True, prompt="File to search in", type=click.Path(),
               help="Path to the file you want to search in")
 @click.option("-W", "--compress-whitespace", is_flag=True,
               help="If set, newlines and other series of whitespace will be ignored")
