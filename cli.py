@@ -36,11 +36,11 @@ def reify():
               help="Path to the file to perform find-and-replace on")
 @click.option("-I", "--in-place", is_flag=True,
               help="If set, the substitution will be performed directly on the file")
-@click.option("-W", "--compress-whitespace", is_flag=True,
-              help="If set, newlines and other series of whitespace will be ignored")
-def subs(input_template, output_template, file, in_place, compress_whitespace):
+@click.option("-W", "--conserve-whitespace", is_flag=True,
+              help="If set, newlines and other series of whitespace in the input template will be taken literally")
+def subs(input_template, output_template, file, in_place, conserve_whitespace):
     """Find a pattern in a document and replace it with different formatting"""
-    p = TemplateProcessor(input_template, output_template, compress_whitespace)
+    p = TemplateProcessor(input_template, output_template, conserve_whitespace)
     click.echo(p.find_and_replace(file, in_place))
 
 
@@ -49,11 +49,11 @@ def subs(input_template, output_template, file, in_place, compress_whitespace):
               help="Path to an input template")
 @click.option("-ot", "--output-template", required=True, prompt="Output template", type=click.Path(),
               help="Path to the template you you're replacing it with")
-@click.option("-W", "--compress-whitespace", is_flag=True,
-              help="If set, newlines and other series of whitespace will be ignored")
-def generate(input_template, output_template, compress_whitespace):
+@click.option("-W", "--conserve-whitespace", is_flag=True,
+              help="If set, newlines and other series of whitespace in the input template will be taken literally")
+def generate(input_template, output_template, conserve_whitespace):
     """Generate regular expression patterns to use in your own find-and-replace tool"""
-    p = TemplateProcessor(input_template, output_template, compress_whitespace)
+    p = TemplateProcessor(input_template, output_template, conserve_whitespace)
     with open("%s.regex" % input_template, "w") as input_regex, \
             open("%s.regex" % output_template, "w") as output_regex:
         input_regex.write(p.pattern)
@@ -67,11 +67,11 @@ def generate(input_template, output_template, compress_whitespace):
               help="Path to the template you want to search against")
 @click.option("-f", "--file", required=True, prompt="File to search in", type=click.Path(),
               help="Path to the file you want to search in")
-@click.option("-W", "--compress-whitespace", is_flag=True,
-              help="If set, newlines and other series of whitespace will be ignored")
-def find(template, file, compress_whitespace):
+@click.option("-W", "--conserve-whitespace", is_flag=True,
+              help="If set, newlines and other series of whitespace in the input template will be taken literally")
+def find(template, file, conserve_whitespace):
     """Find a pattern in a file"""
-    p = TemplateProcessor(template, None, compress_whitespace)
+    p = TemplateProcessor(template, None, conserve_whitespace)
     matches = tuple(p.find(file))
     num_matches = len(matches)
 

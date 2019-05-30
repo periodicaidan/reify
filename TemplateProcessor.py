@@ -4,13 +4,13 @@ import re
 class TemplateProcessor:
     SLOT = r"{{([A-Za-z0-9,.: ]*)}}"
 
-    def __init__(self, pattern_file, target_file, compress_whitespace):
+    def __init__(self, pattern_file, target_file, conserve_whitespace):
         with open(pattern_file, "r") as pf:
             self.pattern = pf.read()
             self.input_tokens = self._find_slots(self.pattern)
 
         self.pattern = re.sub(r"[\\\[(=/!|?\"\'.]", lambda m: f"\\{m.group(0)}", self.pattern)
-        if compress_whitespace:
+        if not conserve_whitespace:
             self.pattern = re.sub(r"\n+", r"\s*", self.pattern)
             self.pattern = re.sub(r"\s{2,}", r"\s*", self.pattern)
 
@@ -47,7 +47,6 @@ class TemplateProcessor:
                 yield token
 
             prev_char = c
-
 
     @staticmethod
     def _parse_input_slots():
