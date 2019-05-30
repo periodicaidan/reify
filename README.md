@@ -167,6 +167,14 @@ And it can take the following flags:
 - `-W` or `--compress-whitespace`: Does the same thing it does for `subs`
 and `generate`
 
+## Todo
+1. Add a graphical user interface.
+1. Create a proper API so it can be more readily employed in other
+applications.
+1. Maybe make the parsing algorithm a *bit* more sophisticated
+1. Make it more fully-featured. Currently it applies to only a few
+narrow use-cases and can't do nearly as much as regex can.
+
 ## License
 Copyright &copy; 2019 Aidan T. Manning
 
