@@ -108,6 +108,17 @@ If you are using numbers, you can even use ranges:
 
 Note that ranges are inclusive of both bounds.
 
+**Cheat Sheet**
+
+| Slot | Appearance | Retains Information | Numbers |Labels| Input Templates | Output Templates |
+|---|---|---|---|---|---|---|
+| Empty | `{{}}` | :heavy_check_mark: | :heavy_check_mark: | :x: | :heavy_check_mark: | :x: |
+| Numbered | `{{3}}` | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Labelled | `{{title}}` | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| List | `{{1 3 title 2}}` | :white_large_square: | :heavy_check_mark: | :heavy_check_mark: | :x: | :heavy_check_mark: |
+| Range | `{{2..5}}` | :white_large_square: | :heavy_check_mark: | :x: | :x: | :heavy_check_mark: |
+| Null | `{{:}}` | :x: | :x: | :x: | :heavy_check_mark: | :x: |
+
 ## Command Line Interface
 
 The Reify command line tool, `reify`, allows you to compile regular
