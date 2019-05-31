@@ -1,10 +1,10 @@
 import click
-from TemplateProcessor import *
+from reify.TemplateProcessor import *
 
 
 @click.group("reify")
 def reify():
-    """The Reify Template Compiler v. 0.1
+    """The Reify Template Compiler v. 0.1.0-beta
 
     Reify is a simple templating language that compiles to regular expression syntax to make finding
     and replacing complex patterns with other complex patterns less of a pain.

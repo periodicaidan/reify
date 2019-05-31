@@ -1,5 +1,5 @@
 test/
-input.html
+*.html
 .idea/
 *.iml
 
@@ -7,7 +7,7 @@ input.html
 *.regex
 
 # Stuff I may add in a later version
-gui.py
+reify/gui.py
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
