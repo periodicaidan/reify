@@ -7,7 +7,7 @@ test/
 *.regex
 
 # Stuff I may add in a later version
-reify/gui.py
+reify/api.py
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
