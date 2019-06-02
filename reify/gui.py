@@ -3,12 +3,26 @@ from tkinter import ttk
 import tkinter.filedialog as fdialog
 from tkinter.scrolledtext import ScrolledText
 
-from typing import Dict, Type
+from typing import Dict, Type, List, Collection, Tuple, Callable
 
 from .TemplateProcessor import *
 
 
 LARGE_FONT = ("Verdana", 12)
+
+
+class ButtonSeries (tk.Frame):
+    def __init__(self, parent, controller, button_data: Collection[Tuple[str, Callable[[], None]]], spacing=5, orientation=tk.E):
+        super().__init__(parent)
+        buttons: List[tk.Button] = list()
+        for label, action in button_data:
+            buttons.append(ttk.Button(self, text=label, command=action))
+
+        for i, button in enumerate(buttons):
+            if orientation == tk.E or orientation == tk.W:
+                button.grid(row=0, column=i, padx=spacing, sticky=orientation)
+            elif orientation == tk.N or orientation == tk.S:
+                button.grid(row=i, column=0, pady=spacing, sticky=orientation)
 
 
 class FileViewer (tk.Frame):
@@ -19,52 +33,114 @@ class FileViewer (tk.Frame):
         self.loaded_label = loaded_label
         self.editable = editable
         self.on_file_loading = on_file_loaing
+        self.fname = None
+        self.fcontent = None
+        self.file_loaded = False
         self.file_viewer = ScrolledText(self, width=width, height=height)
         self.file_viewer_label = ttk.Label(self, text=default_label)
-        self.file_select_button = ttk.Button(self, text="Browse Files...", command=self.select_and_load_file)
+        file_button_data = [("Browse Files...", self.select_and_load_file)]
+        if self.editable:
+            file_button_data.insert(0, ("Save", self.save_file))
+
+        self.file_buttons = ButtonSeries(self, controller, file_button_data)
 
         self.file_viewer.config(wrap="word")
         if not self.editable:
             self.file_viewer.config(state="disabled")
 
-        self.file_viewer_label.grid(row=0, column=0, sticky="w")
-        self.file_select_button.grid(row=0, column=1, sticky="e")
-        self.file_viewer.grid(row=2, column=0, columnspan=2, sticky="nsew")
+        self.file_viewer_label.grid(row=0, column=0, sticky="nw")
+        self.file_viewer.grid(row=1, column=0, sticky="nsew")
+        self.file_buttons.grid(row=2, column=0, sticky="ne")
 
     def select_and_load_file(self):
-        fname = fdialog.askopenfilename(filetypes=(("HTML files", "*.html"), ("XML files", "*.xml")))
+        self.fname = fdialog.askopenfilename(filetypes=(("HTML files", "*.html"), ("XML files", "*.xml")))
 
-        if fname:
-            with open(fname, "r") as h:
-                fcontent = h.read()
+        if self.fname:
+            with open(self.fname, "r") as h:
+                self.fcontent = h.read()
 
             self.file_viewer.config(state="normal")
 
             self.file_viewer.delete("1.0", tk.END)
 
             if self.on_file_loading is None:
-                self.file_viewer.insert(tk.END, fcontent)
+                self.file_viewer.insert(tk.END, self.fcontent)
             else:
-                self.on_file_loading(self.file_viewer, fcontent)
+                self.on_file_loading(self.file_viewer, self.fcontent)
 
-            self.file_viewer_label.config(text=fname if self.loaded_label is None else f"{self.loaded_label} ({fname.split('/')[-1]})")
-
+            self.file_viewer_label.config(text=self.fname if self.loaded_label is None else f"{self.loaded_label} ({self.fname.split('/')[-1]})")
+            self.file_loaded = True
             if not self.editable:
                 self.file_viewer.config(state="disabled")
+
+    def save_file(self):
+        if self.file_loaded:
+            with open(self.fname, "w") as h:
+                h.write(self.file_viewer.get("1.0", tk.END))
+
+        else:
+            fdialog.asksaveasfilename()
+            self.file_loaded = True
+            self.file_viewer_label.config(text=self.fname if self.loaded_label is None else f"{self.loaded_label} ({self.fname.split('/')[-1]})")
 
 
 class IndexPage (tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
-        input_template = FileViewer(self, controller, 60, 20, "No input template selected", "Input template")
-        output_template = FileViewer(self, controller, 60, 20, "No output template selected", "Output template")
-        document = FileViewer(self, controller, 60, 43, "No file selected", editable=False)
-        preview_button = ttk.Button(self, text="Preview Changes...")
+        self.controller = controller
+        self.input_template = FileViewer(self, controller, 60, 20, "No input template selected", "Input template")
+        self.output_template = FileViewer(self, controller, 60, 20, "No output template selected", "Output template")
+        self.document = FileViewer(self, controller, 60, 45, "No file selected", editable=False)
+        buttons = [("Preview Changes...", self.confirm_changes)]
+        self.buttons = ButtonSeries(self, controller, buttons)
 
-        input_template.grid(column=0, row=0, padx=10, pady=10, sticky="ns")
-        output_template.grid(column=0, row=1, padx=10, pady=10, sticky="sn")
-        document.grid(column=1, row=0, rowspan=2, padx=10, pady=10, sticky="n")
-        preview_button.grid(row=2, column=0, columnspan=2, sticky="e", padx=10, pady=10)
+        self.input_template.grid(column=0, row=0, padx=10, pady=10, sticky="ns")
+        self.output_template.grid(column=0, row=1, padx=10, pady=10, sticky="sn")
+        self.document.grid(column=1, row=0, rowspan=2, padx=10, pady=10, sticky="n")
+        self.buttons.grid(row=2, column=0, columnspan=2, sticky="e", padx=10, pady=10)
+
+    def confirm_changes(self):
+        if self.document.fcontent is None or self.document.fcontent == "" \
+                or self.input_template.fcontent is None or self.input_template.fcontent == "" \
+                or self.output_template.fcontent is None or self.output_template.fcontent == "":
+            return
+
+        ConfirmChangesDialog(self, self.controller, self.input_template.fname, self.output_template.fname,
+                             self.document.fname, self.document.fcontent)
+
+
+class ConfirmChangesDialog (tk.Toplevel):
+    def __init__(self, parent, controller, input_template, output_template, file, orig_contents):
+        super().__init__()
+        self.wm_title("Confirm Replacements")
+        self.orig_label = ttk.Label(self, text="Original")
+        self.new_label = ttk.Label(self, text="After Changes")
+        self.orig_document = ScrolledText(self, width=60, height=30)
+        self.new_document = ScrolledText(self, width=60, height=30)
+        self.reify = TemplateProcessor(input_template, output_template, False)
+        button_data = [
+            ("Cancel", self.destroy),
+            ("Confirm", lambda: self.reify.find_and_replace(file, True)),
+            ("Save As...", self.save_changes_as)
+        ]
+        self.buttons = ButtonSeries(self, controller, button_data)
+
+        self.orig_document.insert(tk.END, orig_contents)
+        self.new_document.insert(tk.END, self.reify.find_and_replace(file, False))
+
+        self.orig_document.config(state="disabled")
+
+        self.orig_label.grid(row=0, column=0, padx=10, sticky="nw")
+        self.orig_document.grid(row=1, column=0, padx=10, sticky="nse")
+        self.new_label.grid(row=0, column=1, padx=10, sticky="nw")
+        self.new_document.grid(row=1, column=1, padx=10, sticky="nsw")
+        self.buttons.grid(row=2, column=1, padx=10, pady=10, sticky="se")
+
+    def save_changes_as(self):
+        filename = fdialog.asksaveasfilename()
+        if filename:
+            with open(filename) as h:
+                h.write()
 
 
 class ReifyGUI (tk.Tk):
