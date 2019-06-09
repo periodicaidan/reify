@@ -1,10 +1,11 @@
 import re
+from typing import Iterable, Generator, Iterator, Match, Callable
 
 
 class TemplateProcessor:
     SLOT = r"{{([A-Za-z0-9,.: ]*)}}"
 
-    def __init__(self, pattern_file, target_file, conserve_whitespace):
+    def __init__(self, pattern_file: str, target_file: str, conserve_whitespace: bool):
         with open(pattern_file, "r") as pf:
             self.pattern = pf.read()
             self.input_tokens = self._find_slots(self.pattern)
@@ -29,7 +30,7 @@ class TemplateProcessor:
                 self.target = re.sub("{{(%s)}}" % t, self._prepare_target_slots(), self.target)
 
     @staticmethod
-    def _find_slots(text):
+    def _find_slots(text: str) -> Iterator[str]:
         for i, c in enumerate(text):
             if i == 0:
                 prev_char = c
@@ -49,8 +50,8 @@ class TemplateProcessor:
             prev_char = c
 
     @staticmethod
-    def _parse_input_slots():
-        def inner(m):
+    def _parse_input_slots() -> Callable[[Match], str]:
+        def inner(m: Match) -> str:
             token = m.group(1)
             if token == ":":
                 return r"(?:.*)"
@@ -67,8 +68,8 @@ class TemplateProcessor:
         return inner
 
     @staticmethod
-    def _prepare_target_slots():
-        def inner(m):
+    def _prepare_target_slots() -> Callable[[Match], str]:
+        def inner(m: Match) -> str:
             token = m.group(1)
             if re.match(r"^(?:\d+ )+\d$", token):
                 pat = ""
@@ -93,11 +94,11 @@ class TemplateProcessor:
 
         return inner
 
-    def find(self, file):
+    def find(self, file: str) -> Iterator[Match]:
         with open(file, "r") as input_text:
             return re.finditer(self.pattern, input_text.read())
 
-    def find_and_replace(self, input_file, in_place):
+    def find_and_replace(self, input_file: str, in_place: bool) -> str:
         with open(input_file, "w+" if in_place else "r") as h:
             new_text = re.sub(self.pattern, self.target, h.read())
             if in_place:

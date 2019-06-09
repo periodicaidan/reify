@@ -8,7 +8,7 @@ with open(os.path.join(here, "README.md"), "r") as h:
 
 setup(
     name="reify",
-    version="0.1.0-beta",
+    version="0.2.0-beta",
     description="The Reify Template Compiler",
     long_description=readme,
     long_description_content_type="text/markdown",
