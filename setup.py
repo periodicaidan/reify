@@ -18,7 +18,7 @@ setup(
     license="MIT",
     packages=find_packages(),
     include_package_data=True,
-    install_requires=["Click"],
+    install_requires=["Click", "wxPython", "numpy"],
     entry_points="""
         [console_scripts]
         reify=reify.cli:reify

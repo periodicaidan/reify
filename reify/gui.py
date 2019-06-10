@@ -119,7 +119,6 @@ class IndexPage (ttk.Frame):
         matches = reify.find(self.document.fname)
 
 
-
 class ConfirmChangesDialog (tk.Toplevel):
     def __init__(self, parent, controller, input_template, output_template, file, orig_contents):
         super().__init__()
@@ -179,6 +178,20 @@ class ReifyOptionsMenu (tk.Menu):
 
         self.add_cascade(menu=self.file_menu, label="File")
         self.add_cascade(menu=self.edit_menu, label="Edit")
+
+    def open_project(self):
+        fname = fdialog.askopenfilename(filetypes=(("Reify Project", "*.reproj")))
+
+        if fname is not None:
+            with open(fname, "r") as h:
+                pass
+
+    def save_project(self):
+        fname = fdialog.asksaveasfilename(filetypes=(("Reify Project", "*.reproj")))
+
+        if fname is not None:
+            with open(fname, "w") as h:
+                h.writelines([])
 
 
 class ReifyGUI (tk.Tk):

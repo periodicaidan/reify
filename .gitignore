@@ -6,6 +6,9 @@ test/
 # Regex files generated during testing
 *.regex
 
+# Special Reify Project files for testing
+*.reproj
+
 # Stuff I may add in a later version
 reify/api.py
 
