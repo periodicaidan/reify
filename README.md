@@ -1,5 +1,8 @@
 Reify
 ===
+![Version 0.2.2-beta](https://img.shields.io/badge/version-0.2.2--beta-yellow.svg) 
+[![MIT License](https://img.shields.io/badge/license-MIT-informational.svg)](./LICENSE)  
+
 ### A Templating Language for Find-And-Replace
 
 ## Introduction
@@ -198,7 +201,10 @@ the input template. Any data in slots will be highlighted in green. As
 with the last one, you'll be prompted for the template and file if you
 don't provide them.
 
-#### 
+## Graphical User Interface
+
+The Reify GUI allows for interactive editing, checking, and substitution
+of text in a document. More details to come as I build it out.
 
 ## Todo
 1. Add a graphical user interface.

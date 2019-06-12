@@ -1,14 +1,16 @@
 import re
-from typing import Iterable, Generator, Iterator, Match, Callable
+from typing import *
+from typing import Match
 
 
 class TemplateProcessor:
     SLOT = r"{{([A-Za-z0-9,.: ]*)}}"
 
-    def __init__(self, pattern_file: str, target_file: str, conserve_whitespace: bool):
-        with open(pattern_file, "r") as pf:
-            self.pattern = pf.read()
-            self.input_tokens = self._find_slots(self.pattern)
+    def __init__(self, input_template: str, output_template: Optional[str], conserve_whitespace: bool):
+        self.pattern = input_template
+        self.target = output_template
+
+        self.input_tokens = self._find_slots(self.pattern)
 
         self.pattern = re.sub(r"[\\\[(=/!|?\"\'.]", lambda m: f"\\{m.group(0)}", self.pattern)
         if not conserve_whitespace:
@@ -18,16 +20,16 @@ class TemplateProcessor:
         for t in self.input_tokens:
             self.pattern = re.sub("{{(%s)}}" % t, self._parse_input_slots(), self.pattern, count=1)
 
-        # self.pattern = re.sub(self.SLOT, self._parse_input_slots(), self.pattern)
-        # self.pattern = re.compile(self.pattern)
-
-        if target_file is not None:
-            with open(target_file, "r") as tf:
-                self.target = tf.read()
-                self.output_tokens = self._find_slots(self.target)
+        if output_template is not None:
+            self.output_tokens = self._find_slots(self.target)
 
             for t in self.output_tokens:
                 self.target = re.sub("{{(%s)}}" % t, self._prepare_target_slots(), self.target)
+
+    @classmethod
+    def from_files(cls, input_file: str, output_file: str, conserve_whitespace: bool):
+        with open(input_file, "r") as ih, open(output_file, "r") as oh:
+            return cls(ih.read(), oh.read(), conserve_whitespace)
 
     @staticmethod
     def _find_slots(text: str) -> Iterator[str]:

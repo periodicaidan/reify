@@ -1,10 +1,8 @@
 import wx
+import wx.aui as aui
 from typing import *
 
-try:
-    from .TemplateProcessor import *
-except ImportError:
-    from TemplateProcessor import *
+from .TemplateProcessor import TemplateProcessor
 
 
 ButtonData = NewType("ButtonData", Tuple[str, Callable[[wx.Event], None]])
@@ -29,6 +27,26 @@ class ButtonSeries (wx.Panel):
                 sizer.Add(btn, flag=wx.TOP, border=padding)
 
         self.SetSizer(sizer)
+
+
+class FileViewerContextMenu (wx.Menu):
+    def __init__(self, parent: "FileViewer"):
+        super().__init__()
+        self.parent = parent
+        save_item = wx.MenuItem(self, wx.ID_ANY, "Save Changes")
+        open_item = wx.MenuItem(self, wx.ID_ANY, "Open File")
+        add_to_proj = wx.MenuItem(self, wx.ID_ANY, "Add to Project")
+        clear_item = wx.MenuItem(self, wx.ID_ANY, "Clear")
+
+        self.Append(save_item)
+        self.Append(open_item)
+        self.Append(add_to_proj)
+        self.AppendSeparator()
+        self.Append(clear_item)
+
+        self.Bind(wx.EVT_MENU, self.parent.save_file, save_item)
+        self.Bind(wx.EVT_MENU, self.parent.select_and_load_file, open_item)
+        self.Bind(wx.EVT_MENU, lambda e: self.parent.file_viewer.Clear(), clear_item)
 
 
 class FileViewer (wx.Panel):
@@ -60,7 +78,11 @@ class FileViewer (wx.Panel):
 
         self.SetSizer(self.sizer)
 
-    def open_file(self, pathname):
+        self.file_viewer.Bind(wx.EVT_RIGHT_DOWN, lambda e: self.PopupMenu(FileViewerContextMenu(self), e.GetPosition()))
+
+    def open_file(self, pathname: Optional[str]):
+        if pathname is None:
+            return
         try:
             with open(pathname, "r") as h:
                 self.file_viewer.SetValue(h.read())
@@ -84,7 +106,11 @@ class FileViewer (wx.Panel):
 
     def save_file(self, e: wx.Event) -> None:
         if self.filename is None:
-            with wx.FileDialog(self,
+            with wx.FileDialog(self, message=f"Save {self.name.lower()} as new file",
+                                name=f"Save {self.name.lower()} as new file",
+                               wildcard="HTML Files (*.html;*.htm)|*.html;*.htm|"
+                                        "XML Files (*.xml)|*.xml|"
+                                        "All files|*.*",
                                style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fd:
 
                 if fd.ShowModal() == wx.ID_CANCEL:
@@ -97,21 +123,28 @@ class FileViewer (wx.Panel):
 
 
 class ReifyMenuBar (wx.MenuBar):
-    def __init__(self, win: "IndexPage", style=0):
+    def __init__(self, parent: wx.Window, notebook: wx.Notebook, style=0):
         super().__init__(style)
-        self.win = win
+        self.parent = parent
+        self.notebook = notebook
+        self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.set_page)
+        self.current_page: "IndexPanel" = notebook.GetPage(notebook.GetSelection())
 
         file_menu = wx.Menu()
-        new_item = file_menu.Append(wx.ID_NEW, "&New", "Start a new Reify project")
-        open_item = file_menu.Append(wx.ID_OPEN, "&Open", "Open a Reify project")
-        save_item = file_menu.Append(wx.ID_SAVE, "&Save", "Save Reify project")
-        save_as_item = file_menu.Append(wx.ID_SAVEAS, "Save &As...\tCtrl+Shift+S",
+        self.new_item = file_menu.Append(wx.ID_NEW, "&New", "Start a new Reify project")
+        self.open_item = file_menu.Append(wx.ID_OPEN, "&Open", "Open a Reify project")
+        self.save_item = file_menu.Append(wx.ID_SAVE, "&Save", "Save Reify project")
+        self.save_as_item = file_menu.Append(wx.ID_SAVEAS, "Save &As...\tCtrl+Shift+S",
                                         "Save this Reify project to a new file")
         file_menu.AppendSeparator()
-        quit_item = file_menu.Append(wx.ID_EXIT, "&Quit", "Exit Reify")
+        self.close_item = file_menu.Append(wx.ID_CLOSE, "&Close", "Close Project")
+        self.quit_item = file_menu.Append(wx.ID_EXIT, "&Quit", "Exit Reify")
 
-        self.Bind(wx.EVT_MENU, lambda e: self.win.open_reproj(), open_item)
-        self.Bind(wx.EVT_MENU, lambda e: self.win.Close(), quit_item)
+        self.Bind(wx.EVT_MENU, self.current_page.open_reproj, self.open_item)
+        self.Bind(wx.EVT_MENU, self.current_page.save_all, self.save_item)
+        self.Bind(wx.EVT_MENU, self.current_page.save_as, self.save_as_item)
+        self.Bind(wx.EVT_MENU, self.close_reproj, self.close_item)
+        self.Bind(wx.EVT_MENU, lambda e: self.parent.Close(), self.quit_item)
 
         edit_menu = wx.Menu()
         edit_menu.Append(wx.ID_UNDO, "&Undo")
@@ -124,6 +157,24 @@ class ReifyMenuBar (wx.MenuBar):
 
         self.Append(file_menu, "&File")
         self.Append(edit_menu, "&Edit")
+
+    def close_reproj(self, e: wx.Event):
+        idx = self.notebook.GetSelection()
+        self.notebook.RemovePage(idx)
+        self.notebook.SetSelection(idx - 1)
+
+    def set_page(self, e: wx.BookCtrlEvent):
+        idx = e.GetSelection()
+        self.Unbind(wx.EVT_MENU, self.open_item)
+        self.Unbind(wx.EVT_MENU, self.save_item)
+        self.Unbind(wx.EVT_MENU, self.save_as_item)
+
+        self.current_page = self.notebook.GetPage(idx)
+        self.Bind(wx.EVT_MENU, self.current_page.open_reproj, self.open_item)
+        self.Bind(wx.EVT_MENU, self.current_page.save_all, self.save_item)
+        self.Bind(wx.EVT_MENU, self.current_page.save_as, self.save_as_item)
+
+        e.Skip()
 
 
 class ConfirmChangesDialog (wx.Dialog):
@@ -183,16 +234,24 @@ class ConfirmChangesDialog (wx.Dialog):
 
 
 class IndexPanel (wx.Panel):
-    def __init__(self, parent):
+    def __init__(self, parent: wx.Notebook):
         super().__init__(parent)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
 
+        self.parent = parent
         self.input_template_viewer = FileViewer(self, "Input Template")
         self.output_template_viewer = FileViewer(self, "Output Template")
         self.document_viewer = FileViewer(self, "Document", readonly=True)
+        self.reproj: Dict[str, Optional[str]] = {
+            "project_path": None,
+            "input_template": None,
+            "output_template": None,
+            "document": None
+        }
 
         button_data: List[ButtonData] = [
+            ("Check", lambda e: self.highlight_matches()),
             ("Preview Changes...", self.confirm_changes)
         ]
         self.buttons = ButtonSeries(self, button_data)
@@ -209,6 +268,57 @@ class IndexPanel (wx.Panel):
 
         self.SetSizer(sizer)
 
+    def open_reproj(self, e: wx.Event):
+        with wx.FileDialog(self, "Select Project", wildcard="Reify Project Files(*.reproj)|*.reproj",
+                           style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fd:
+
+            if fd.ShowModal() == wx.ID_CANCEL:
+                return
+
+            project_path: str = fd.GetPath()
+            with open(project_path, "r") as h:
+                self.reproj.update(**{
+                    "project_path": project_path,
+                    "input_template": h.readline().strip(),
+                    "output_template": h.readline().strip(),
+                    "document": h.readline().strip()
+                })
+
+                for k, v in self.reproj.items():
+                    if v == "":
+                        self.reproj[k] = None
+
+                self.input_template_viewer.open_file(self.reproj["input_template"])
+                self.output_template_viewer.open_file(self.reproj["output_template"])
+                self.document_viewer.open_file(self.reproj["document"])
+
+                e.Skip()
+
+    def save_as(self, e: wx.Event):
+        self.save_all(e)
+
+        with wx.FileDialog(self, "Save as New Reify Project", defaultFile="untitled.reproj",
+                           wildcard="Reify Project Files (*.reproj)|*.reproj",
+                           style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fd:
+
+            if fd.ShowModal() == wx.ID_CANCEL:
+                return
+
+            self.reproj["project_path"] = fd.GetPath()
+
+            with open(self.reproj["project_path"], "w") as h:
+                h.writelines([
+                    self.reproj["input_template"],
+                    self.reproj["output_template"],
+                    self.reproj["document"]
+                ])
+
+    def save_all(self, e: wx.Event):
+        self.input_template_viewer.save_file(e)
+        self.output_template_viewer.save_file(e)
+        self.document_viewer.save_file(e)
+        print("Saved")
+
     def confirm_changes(self, e: wx.Event) -> None:
         if self.input_template_viewer.filename is None \
                 or self.output_template_viewer.filename is None \
@@ -221,10 +331,28 @@ class IndexPanel (wx.Panel):
             return
 
         with ConfirmChangesDialog(parent=self,
-                                  input_template=self.input_template_viewer.filename,
-                                  output_template=self.output_template_viewer.filename,
+                                  input_template=self.input_template_viewer.file_viewer.GetValue(),
+                                  output_template=self.output_template_viewer.file_viewer.GetValue(),
                                   document=self.document_viewer) as ccd:
             ccd.ShowModal()
+
+    def highlight_matches(self):
+        text = self.document_viewer.file_viewer
+        text.SetStyle(1, len(text.GetValue()), text.GetDefaultStyle())
+        reify = TemplateProcessor(
+            self.input_template_viewer.file_viewer.GetValue(),
+            self.output_template_viewer.file_viewer.GetValue(),
+            False
+        )
+        matches: Tuple[Match] = tuple(reify.find(self.document_viewer.filename))
+        if len(matches) == 0:
+            return
+
+        highlight = wx.TextAttr(wx.BLACK, wx.GREEN)
+        highlight.SetFontWeight(wx.FONTWEIGHT_BOLD)
+        for i, m in enumerate(matches):
+            for j in range(len(m.groups())):
+                text.SetStyle(m.start(j + 1), m.end(j + 1), highlight)
 
 
 class IndexPage (wx.Frame):
@@ -234,9 +362,31 @@ class IndexPage (wx.Frame):
         self.open_files = open_files
         self.SetSize(1000, 1000)
         self.SetMinSize(wx.Size(500, 500))
-        self.SetMenuBar(ReifyMenuBar(self))
-        self.panel = IndexPanel(self)
+        self.notebook = wx.Notebook(self)
+        self.panel = IndexPanel(self.notebook)
+        self.panel.SetFocus()
+
+        self.notebook.AddPage(self.panel, "untitled")
+        self.add_page()
+        self.notebook.AddPage(wx.Panel(self.notebook), "+")
+
+        menubar = ReifyMenuBar(self, self.notebook)
+        self.SetMenuBar(menubar)
+        self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.change_or_add_page)
+
         self.Show()
+
+    def change_or_add_page(self, e: wx.BookCtrlEvent):
+        idx = e.GetSelection()
+        print(idx)
+        if idx == self.notebook.GetPageCount() - 1:
+            self.add_page()
+        self.notebook.SetSelection(idx)
+
+        e.Skip()
+
+    def add_page(self):
+        self.notebook.InsertPage(self.notebook.GetPageCount() - 1, IndexPanel(self.notebook), "untitled")
 
     def open_reproj(self):
         with wx.FileDialog(self, "Select Project", wildcard="Reify Project Files(*.reproj)|*.reproj",
@@ -255,7 +405,20 @@ class IndexPage (wx.Frame):
                 self.panel.input_template_viewer.open_file(self.open_files["input_template"])
                 self.panel.output_template_viewer.open_file(self.open_files["output_template"])
                 self.panel.document_viewer.open_file(self.open_files["document"])
-                self.SetTitle(f"Reify ({self.proj})")
+
+                self.notebook.SetPageText(self.notebook.GetSelection(), self.proj.split("/")[-1])
+
+    def save_reproj(self, e: wx.Event):
+        if self.proj is None:
+            pass
+
+        self.panel.save_all(e)
+        with open(self.proj, "w") as h:
+            h.writelines([
+                self.open_files["input_template"],
+                self.open_files["output_template"],
+                self.open_files["document"]
+            ])
 
 
 class ReifyGUI (wx.App):
@@ -268,7 +431,3 @@ class ReifyGUI (wx.App):
     def mainloop(self):
         frame = IndexPage(self.open_files)
         self.MainLoop()
-
-
-if __name__ == "__main__":
-    ReifyGUI().mainloop()
